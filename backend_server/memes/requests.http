@@ -2,10 +2,10 @@ POST http://localhost:3000/memes
 Content-Type: application/json
 
 {
-  "key": "행복",
+  "key": "분노",
   "personName": "박명수",
-  "path": "/images/1.jpg",
-  "subtitle": "나는 행복한 놈이다..."
+  "path": "/images/4.jpg",
+  "subtitle": "왜!"
 }
 
 ### get one
