@@ -160,7 +160,7 @@
       create_carousel_array (index) {
         if (index !== 0) {
           const begin = this.items.slice(index)
-          const end = this.items.slice(0, index - 1)
+          const end = this.items.slice(0, index)
           this.carousel_items = begin.concat(end)
         } else {
           this.carousel_items = this.items
