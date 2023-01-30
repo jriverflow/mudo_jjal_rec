@@ -8,4 +8,5 @@ Test 하는 법 (requirements: npm, yarn)
 3. VScode 새 창 열기
 4. frontend_server 폴더 들어가서 yarn install
 5. yarn dev
-6. 검색창에 '행복' 검색
+6. 브라우저에서 localhost:80 접속
+7. 검색창에 '행복' 검색
