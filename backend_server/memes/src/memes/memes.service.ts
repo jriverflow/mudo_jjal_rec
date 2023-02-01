@@ -1,24 +1,36 @@
 import { Injectable } from '@nestjs/common';
-import { MemesRepository } from './memes.repository';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { CreateMemeDTO } from './dtos/create-meme.dto';
+import { Meme } from './entities/Meme.entity';
 
 @Injectable()
 export class MemesService {
-  constructor(public memesRepo: MemesRepository) {}
+  constructor(@InjectRepository(Meme) private repo: Repository<Meme>) {
+    this.repo = repo;
+  }
 
-  findOne(id: string) {
-    return this.memesRepo.findOne(id);
+  findOne(id: number) {
+    if (!id) {
+      return null;
+    }
+    return this.repo.findOneBy({ id });
   }
 
   findAll() {
-    return this.memesRepo.findAll();
+    return this.repo.find();
   }
 
-  filter(key: string, personName: string) {
-    return this.memesRepo.filter(key, personName);
+  async createMeme(meme: CreateMemeDTO) {
+    await this.repo.save(meme);
   }
 
-  // 나중에 이거 클래스를 만들어서 클래스를 받게 수정해야할 것 같음
-  create(key: string, personName: string, path: string, subtitle: string) {
-    return this.memesRepo.create(key, personName, path, subtitle);
+  filterMeme(key: string, personName: string) {
+    return this.repo
+      .createQueryBuilder()
+      .select('*')
+      .where('key = :key', { key })
+      .andWhere('personName = :personName', { personName })
+      .getMany();
   }
 }

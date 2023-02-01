@@ -1,56 +1,49 @@
 import {
+  Body,
   Controller,
   Get,
-  Post,
-  Body,
-  Param,
-  Query,
   NotFoundException,
-  Req,
+  Param,
+  Post,
+  Query,
 } from '@nestjs/common';
-import { Request } from 'express';
-import { CreateMemeDto } from './dtos/create-meme.dto';
+import { CreateMemeDTO } from './dtos/create-meme.dto';
+import { Meme } from './entities/Meme.entity';
 import { MemesService } from './memes.service';
 
-@Controller('/memes')
+@Controller('memes')
 export class MemesController {
-  constructor(public memesService: MemesService) {}
+  constructor(private memesService: MemesService) {}
 
   @Get()
-  listMemes() {
+  findAll(): Promise<Meme[]> {
     return this.memesService.findAll();
   }
 
-  @Get('/search')
-  filteredMemes(
-    @Query('key') key: string,
-    @Query('personName') personName: string,
-  ) {
-    return this.memesService.filter(key, personName);
-  }
-
-  @Post()
-  createMemes(@Body() body: CreateMemeDto) {
-    return this.memesService.create(
-      body.key,
-      body.personName,
-      body.path,
-      body.subtitle,
-    );
-  }
-
   @Get('/:id')
-  async getMemes(@Param('id') id: string) {
-    const meme = await this.memesService.findOne(id);
+  async findOne(@Param() id: string): Promise<Meme> {
+    const meme = await this.memesService.findOne(parseInt(id));
 
     if (!meme) {
-      throw new NotFoundException('meme not found');
+      throw new NotFoundException('짤을 찾을 수 없습니다.');
     }
+
     return meme;
   }
 
-  // @Post('/predict')
-  // predict(@Req request: Request) {
-  //   request('http://localhost:5000/predict')
-  // }
+  @Post()
+  async createMeme(@Body() body: CreateMemeDTO) {
+    const meme = await this.memesService.createMeme(body);
+
+    console.log(meme);
+    return meme;
+  }
+
+  @Get('/search')
+  async filterMeme(
+    @Query() key: string,
+    @Query() personName: string,
+  ): Promise<Meme[]> {
+    return await this.memesService.filterMeme(key, personName);
+  }
 }
