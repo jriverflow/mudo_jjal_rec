@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { CreateMemeDTO } from './dtos/create-meme.dto';
+import { CreateMemeDto } from './dtos/create-meme.dto';
+import { FilterMemeDto } from './dtos/filter-meme.dto';
 import { Meme } from './entities/Meme.entity';
 
 @Injectable()
@@ -21,18 +22,13 @@ export class MemesService {
     return this.repo.find();
   }
 
-  async createMeme(meme: CreateMemeDTO) {
+  async createMeme(meme: CreateMemeDto) {
     await this.repo.save(meme);
   }
 
-  async filterMeme(key: string, personName: string) {
+  async filterMeme({ sent, personName }: FilterMemeDto) {
     return await this.repo.find({
-      where: { key, personName },
+      where: { sent, personName },
     });
-    // .createQueryBuilder()
-    // .select('meme')
-    // .where('key = :key', { key })
-    // .andWhere('personName = :personName', { personName })
-    // .getMany();
   }
 }

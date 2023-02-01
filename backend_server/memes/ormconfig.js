@@ -1,5 +1,5 @@
 const dbConfig = {
-  synchronize: false,
+  synchronize: true,
 };
 
 Object.assign(dbConfig, {

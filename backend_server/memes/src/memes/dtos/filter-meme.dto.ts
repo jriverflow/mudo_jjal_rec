@@ -1,15 +1,9 @@
 import { IsString } from 'class-validator';
 
-export class CreateMemeDto {
+export class FilterMemeDto {
   @IsString()
   sent: string;
 
   @IsString()
   personName: string;
-
-  @IsString()
-  path: string;
-
-  @IsString()
-  subtitle: string;
 }

@@ -7,7 +7,8 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { CreateMemeDTO } from './dtos/create-meme.dto';
+import { CreateMemeDto } from './dtos/create-meme.dto';
+import { FilterMemeDto } from './dtos/filter-meme.dto';
 import { Meme } from './entities/Meme.entity';
 import { MemesService } from './memes.service';
 
@@ -18,6 +19,13 @@ export class MemesController {
   @Get()
   findAll(): Promise<Meme[]> {
     return this.memesService.findAll();
+  }
+
+  @Get('/search')
+  async filterMeme(@Query() query: FilterMemeDto) {
+    console.log(query);
+
+    return await this.memesService.filterMeme(query);
   }
 
   @Get('/:id')
@@ -32,17 +40,9 @@ export class MemesController {
   }
 
   @Post()
-  async createMeme(@Body() body: CreateMemeDTO) {
+  async createMeme(@Body() body: CreateMemeDto) {
     const meme = await this.memesService.createMeme(body);
 
     return meme;
-  }
-
-  @Get('/search')
-  async filterMeme(
-    @Query('key') key: string,
-    @Query('personName') personName: string,
-  ): Promise<Meme[]> {
-    return await this.memesService.filterMeme(key, personName);
   }
 }
