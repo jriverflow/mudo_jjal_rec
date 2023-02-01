@@ -10,11 +10,11 @@ export class MemesService {
     this.repo = repo;
   }
 
-  findOne(id: number) {
+  async findOne(id: number) {
     if (!id) {
       return null;
     }
-    return this.repo.findOneBy({ id });
+    return await this.repo.findOneBy({ id });
   }
 
   findAll() {
@@ -25,12 +25,14 @@ export class MemesService {
     await this.repo.save(meme);
   }
 
-  filterMeme(key: string, personName: string) {
-    return this.repo
-      .createQueryBuilder()
-      .select('*')
-      .where('key = :key', { key })
-      .andWhere('personName = :personName', { personName })
-      .getMany();
+  async filterMeme(key: string, personName: string) {
+    return await this.repo.find({
+      where: { key, personName },
+    });
+    // .createQueryBuilder()
+    // .select('meme')
+    // .where('key = :key', { key })
+    // .andWhere('personName = :personName', { personName })
+    // .getMany();
   }
 }

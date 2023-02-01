@@ -21,7 +21,7 @@ export class MemesController {
   }
 
   @Get('/:id')
-  async findOne(@Param() id: string): Promise<Meme> {
+  async findOne(@Param('id') id: string): Promise<Meme> {
     const meme = await this.memesService.findOne(parseInt(id));
 
     if (!meme) {
@@ -35,14 +35,13 @@ export class MemesController {
   async createMeme(@Body() body: CreateMemeDTO) {
     const meme = await this.memesService.createMeme(body);
 
-    console.log(meme);
     return meme;
   }
 
   @Get('/search')
   async filterMeme(
-    @Query() key: string,
-    @Query() personName: string,
+    @Query('key') key: string,
+    @Query('personName') personName: string,
   ): Promise<Meme[]> {
     return await this.memesService.filterMeme(key, personName);
   }
