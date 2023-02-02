@@ -1,0 +1,20 @@
+POST http://localhost:3000/memes
+Content-Type: application/json
+
+{
+  "key": "분노",
+  "personName": "박명수",
+  "path": "/images/4.jpg",
+  "subtitle": "왜!"
+}
+
+### get one
+GET http://localhost:3000/memes/815
+
+### get all
+GET http://localhost:3000/memes
+Content-Type: application/json
+
+### search
+GET http://localhost:3000/memes/search?key=행복&&personName=박명수
+

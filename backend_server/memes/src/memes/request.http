@@ -1,0 +1,19 @@
+### create a meme
+POST http://localhost:3000/memes
+Content-Type: application/json
+
+{
+  "keyword": "분노",
+  "personName": "박명수",
+  "path": "images/2.jpg",
+  "subtitle": "이놈! 감히 어디라고"
+}
+
+### get all memes
+GET http://localhost:3000/memes
+
+### get a meme
+GET http://localhost:3000/memes/1
+
+### get a filtered memes
+GET http://localhost:3000/memes/search?keyword=행복&personName=박명수
