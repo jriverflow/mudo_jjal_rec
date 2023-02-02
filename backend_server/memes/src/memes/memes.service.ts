@@ -26,9 +26,9 @@ export class MemesService {
     await this.repo.save(meme);
   }
 
-  async filterMeme({ sent, personName }: FilterMemeDto) {
+  async filterMeme({ keyword, personName }: FilterMemeDto) {
     return await this.repo.find({
-      where: { sent, personName },
+      where: { keyword, personName },
     });
   }
 }

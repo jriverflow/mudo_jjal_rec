@@ -2,7 +2,7 @@ import { IsString } from 'class-validator';
 
 export class FilterMemeDto {
   @IsString()
-  sent: string;
+  keyword: string;
 
   @IsString()
   personName: string;

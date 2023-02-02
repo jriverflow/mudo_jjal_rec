@@ -6,7 +6,7 @@ export class Meme {
   id: number;
 
   @Column()
-  sent: string;
+  keyword: string;
 
   @Column()
   personName: string;
