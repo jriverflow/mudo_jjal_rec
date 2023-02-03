@@ -2,12 +2,13 @@
 
 import importlib
 import logging
+import json
 from celery import Task
 
 from .worker import app
 
 
-class PredictTask(Task):
+class RecommendTask(Task):
     """
     Abstraction of Celery's Task class to support loading ML model.
     """
@@ -33,13 +34,12 @@ class PredictTask(Task):
 
 @app.task(ignore_result=False,
           bind=True,
-          base=PredictTask,
-          path=('celery_task_app.ml.model', 'ChurnModel'),
-          name='{}.{}'.format(__name__, 'Churn'))
-def predict_churn_single(self, data):
+          base=RecommendTask,
+          path=('celery_task_app.ml.model', 'RecModel'),
+          name='{}.{}'.format(__name__, 'Meme'))
+def recommend_mems(self, data):
     """
-    Essentially the run method of PredictTask
+    Essentially the run method of RecommendTask
     """
-    pred_array = self.model.predict([data])
-    positive_prob = pred_array[0][-1]
-    return positive_prob
+    recommendations = self.model.recommend(data['sentence'])
+    return recommendations

@@ -3,8 +3,8 @@
 import os
 from celery import Celery
 
-BROKER_URI = os.environ['BROKER_URI']
-BACKEND_URI = os.environ['BACKEND_URI']
+BROKER_URI = 'redis://localhost:6379'
+BACKEND_URI = 'redis://localhost:6379'
 
 app = Celery(
     'celery_app',
