@@ -7,7 +7,6 @@ from celery import Task
 
 from .worker import app
 
-
 class RecommendTask(Task):
     """
     Abstraction of Celery's Task class to support loading ML model.

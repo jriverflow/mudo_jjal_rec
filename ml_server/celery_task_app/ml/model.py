@@ -14,29 +14,13 @@ import numpy as np
 from kobert.utils import get_tokenizer 
 from kobert.pytorch_kobert import get_pytorch_kobert_model
 
-from hanspell import spell_checker 
+from hanspell import spell_checker
 
-class BERTDataset(Dataset):
-    """
-    # 모델에 input 될수 있도록 하는 데이터 변환 과정 
-    #  KoBERT 모델의 입력으로 들어갈 수 있는 형태가 되도록 토큰화, 정수 인코딩, 패딩 등을 해야함. 
-    """
-    def __init__(self, dataset, sent_idx, label_idx, bert_tokenizer, max_len,
-                 pad, pair):
-        transform = nlp.data.BERTSentenceTransform(
-            bert_tokenizer, max_seq_length=max_len, pad=pad, pair=pair)
+device = torch.device("cuda:0")
 
-        self.sentences = [transform([i[sent_idx]]) for i in dataset]
-        self.labels = [np.int32(i[label_idx]) for i in dataset]
-
-    def __getitem__(self, i):
-        return (self.sentences[i] + (self.labels[i], ))
-
-    def __len__(self):
-        return (len(self.labels))
+bertmodel, vocab = get_pytorch_kobert_model() 
 
 class BERTClassifier(nn.Module):
-    """KoBERT"""
     def __init__(self,
                  bert,
                  hidden_size = 768,
@@ -78,51 +62,72 @@ class BERTClassifier(nn.Module):
         emb = self.embeddings(token_ids, valid_length, segment_ids, False)
         return self.classifier(emb)
 
+class BERTDataset(Dataset):
+    """
+    # 모델에 input 될수 있도록 하는 데이터 변환 과정 
+    #  KoBERT 모델의 입력으로 들어갈 수 있는 형태가 되도록 토큰화, 정수 인코딩, 패딩 등을 해야함. 
+    """
+    def __init__(self, dataset, sent_idx, label_idx, bert_tokenizer, max_len,
+                 pad, pair):
+        transform = nlp.data.BERTSentenceTransform(
+            bert_tokenizer, max_seq_length=max_len, pad=pad, pair=pair)
+
+        self.sentences = [transform([i[sent_idx]]) for i in dataset]
+        self.labels = [np.int32(i[label_idx]) for i in dataset]
+
+    def __getitem__(self, i):
+        return (self.sentences[i] + (self.labels[i], ))
+
+    def __len__(self):
+        return (len(self.labels))
+
+
 # Cosine similarity
 def cosine_similarity(a, b):
     return np.dot(a, b) / (np.linalg.norm(a) * (np.linalg.norm(b)))
 
-MODEL_PATH = os.environ['MODEL_PATH']
+MODEL_DICT_PATH = os.environ['MODEL_DICT_PATH']
 CLASSIFICATION_RESULT_PATH = os.environ['CLASSIFICATION_RESULT_PATH']
 
 class RecModel:
     """ Wrapper for loading and serving pre-trained model"""
     def __init__(self):
         pass
-        self.model = self._load_model_from_path(MODEL_PATH)
+        self.model = self._load_model_from_path(MODEL_DICT_PATH)
         self.classification_result = self._load_classification_result_from_path(CLASSIFICATION_RESULT_PATH)
 
     @staticmethod
-    def _load_model_from_path(path):
-        model = torch.load(path)
+    def _load_model_from_path(model_dict_path):
+        os.chdir(os.path.dirname(model_dict_path))
+        bertmodel, _ = get_pytorch_kobert_model()
+        device = torch.device("cuda:0")
+        model = BERTClassifier(bertmodel, dr_rate=0.5).to(device)
+        model.load_state_dict(torch.load(model_dict_path))
         return model
 
     @staticmethod
     def _load_classification_result_from_path(path):
-        result = json.load(path)
+        result = dict()
+        with open(path) as f:
+            result = json.load(f)
         return result
 
-    def predict(sentence):
-        device = torch.device("cuda:0")
+    def predict(self, predict_sentence):
 
-        bertmodel, vocab = get_pytorch_kobert_model() 
+        data = [predict_sentence, '0']
+        dataset_another = [data]
 
-        # Tokenization
+        #토큰화
         tokenizer = get_tokenizer()
         tok = nlp.data.BERTSPTokenizer(tokenizer, vocab, lower=False)
 
         max_len = 64
         batch_size = 64
 
-        data = [sentence, '0']
-        dataset_another = [data]
-
         another_test = BERTDataset(dataset_another, 0, 1, tok, max_len, True, False)
         test_dataloader = torch.utils.data.DataLoader(another_test, batch_size=batch_size, num_workers=4)
-
-        model = BERTClassifier(bertmodel,  dr_rate=0.5).to(device)
         
-        model.eval()
+        self.model.eval()
 
         for batch_id, (token_ids, valid_length, segment_ids, label) in enumerate(test_dataloader):
             token_ids = token_ids.long().to(device)
@@ -131,9 +136,9 @@ class RecModel:
             valid_length= valid_length
             label = label.long().to(device)
 
-            logits = model(token_ids, valid_length, segment_ids).cpu().detach().numpy()  # 범주 5개로 된 출력값
+            logits = self.model(token_ids, valid_length, segment_ids).cpu().detach().numpy()  # 범주 5개로 된 출력값
         
-            embed = model.embeddings(token_ids, valid_length, segment_ids).cpu().detach().numpy().tolist()  # 임베딩값
+            embed = self.model.embeddings(token_ids, valid_length, segment_ids).cpu().detach().numpy().tolist()  # 임베딩값
 
             s = ''
             if np.argmax(logits) == 0:
