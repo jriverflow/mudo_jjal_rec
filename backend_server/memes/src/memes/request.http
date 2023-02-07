@@ -5,7 +5,7 @@ Content-Type: application/json
 {
   "keyword": "분노",
   "personName": "박명수",
-  "path": "images/2.jpg",
+  "path": "images/1.jpg",
   "subtitle": "이놈! 감히 어디라고"
 }
 
