@@ -1,13 +1,18 @@
+import { HttpService } from '@nestjs/axios';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CreateMemeDto } from './dtos/create-meme.dto';
 import { FilterMemeDto } from './dtos/filter-meme.dto';
+import { RecommendMemeDto } from './dtos/recommend-meme.dto';
 import { Meme } from './entities/Meme.entity';
 
 @Injectable()
 export class MemesService {
-  constructor(@InjectRepository(Meme) private repo: Repository<Meme>) {
+  constructor(
+    @InjectRepository(Meme) private repo: Repository<Meme>,
+    private readonly httpService: HttpService,
+  ) {
     this.repo = repo;
   }
 
@@ -30,5 +35,15 @@ export class MemesService {
     return await this.repo.find({
       where: { keyword, personName },
     });
+  }
+
+  async recommendMeme(sentence: RecommendMemeDto) {
+    return this.httpService.post('http://localhost:8000/recommend', sentence);
+  }
+
+  async getRecMeme(taskId: string) {
+    return this.httpService.get(
+      `http://localhost:8000/recommend/result/${taskId}`,
+    );
   }
 }
