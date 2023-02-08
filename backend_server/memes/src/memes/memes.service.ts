@@ -6,6 +6,8 @@ import { CreateMemeDto } from './dtos/create-meme.dto';
 import { FilterMemeDto } from './dtos/filter-meme.dto';
 import { RecommendMemeDto } from './dtos/recommend-meme.dto';
 import { Meme } from './entities/Meme.entity';
+import { catchError, lastValueFrom } from 'rxjs';
+import { AxiosError } from 'axios';
 
 @Injectable()
 export class MemesService {
@@ -38,12 +40,26 @@ export class MemesService {
   }
 
   async recommendMeme(sentence: RecommendMemeDto) {
-    return this.httpService.post('http://localhost:8000/recommend', sentence);
+    const { data } = await lastValueFrom(this.httpService.post('http://localhost:8000/recommend', sentence).pipe(
+      catchError((err: AxiosError) => {
+        console.log(err.response.data);
+        throw 'An error accurred'
+      })
+    ));
+    
+    return data;
   }
 
   async getRecMeme(taskId: string) {
-    return this.httpService.get(
+    const { data } = await lastValueFrom(this.httpService.get(
       `http://localhost:8000/recommend/result/${taskId}`,
-    );
+    ).pipe(
+      catchError((err: AxiosError) => {
+        console.log(err.response.data);
+        throw 'An error accurred'
+      })
+    ));
+
+    return data;
   }
 }
