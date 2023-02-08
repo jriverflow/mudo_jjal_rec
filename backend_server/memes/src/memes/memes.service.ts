@@ -6,7 +6,7 @@ import { CreateMemeDto } from './dtos/create-meme.dto';
 import { FilterMemeDto } from './dtos/filter-meme.dto';
 import { RecommendMemeDto } from './dtos/recommend-meme.dto';
 import { Meme } from './entities/Meme.entity';
-import { catchError, lastValueFrom } from 'rxjs';
+import { catchError, firstValueFrom, lastValueFrom } from 'rxjs';
 import { AxiosError } from 'axios';
 
 @Injectable()
@@ -40,26 +40,29 @@ export class MemesService {
   }
 
   async recommendMeme(sentence: RecommendMemeDto) {
-    const { data } = await lastValueFrom(this.httpService.post('http://localhost:8000/recommend', sentence).pipe(
+    const res = this.httpService.post('http://localhost:8000/recommend', sentence).pipe(
       catchError((err: AxiosError) => {
         console.log(err.response.data);
-        throw 'An error accurred'
+        throw 'An error accurred';
       })
-    ));
+    )
+    const header = await firstValueFrom(res)
+    const { data } = await lastValueFrom(res);
     
-    return data;
+    return Object.assign({"status_code": header.status}, data);
   }
 
   async getRecMeme(taskId: string) {
-    const { data } = await lastValueFrom(this.httpService.get(
-      `http://localhost:8000/recommend/result/${taskId}`,
-    ).pipe(
+    const res = this.httpService.get(`http://localhost:8000/recommend/result/${taskId}`)
+      .pipe(
       catchError((err: AxiosError) => {
         console.log(err.response.data);
         throw 'An error accurred'
       })
-    ));
-
-    return data;
+    );
+    const header = await firstValueFrom(res);
+    const { data } = await lastValueFrom(res);
+    
+    return Object.assign({"status_code": header.status}, data);
   }
 }
