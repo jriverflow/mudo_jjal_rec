@@ -5,7 +5,7 @@ from fastapi.responses import JSONResponse
 from celery.result import AsyncResult
 
 from celery_task_app.tasks import recommend_mems
-from models import Client, Task, Recommendations
+from models import Client, Task, Recommendation, Recommendations
 import json
 
 app = FastAPI()
@@ -15,7 +15,7 @@ app = FastAPI()
 async def session(client: Client):
     """Create celery recommendation task. Return task_id to client in order to retrieve result"""
     task_id = recommend_mems.delay(dict(client))
-    return {'task_id': str(task_id), 'status': 'Processing'}
+    return Task(task_id=str(task_id), status='Processing')
 
 
 @app.get('/recommend/result/{task_id}', response_model=Recommendations, status_code=200,
@@ -27,4 +27,4 @@ async def task_result(task_id):
         print(app.url_path_for('session'))
         return JSONResponse(status_code=202, content={'task_id': str(task_id), 'status': 'Processing'})
     result = task.get()
-    return {'task_id': task_id, 'status': 'Success', 'recommendations': result}
+    return Recommendations(task_id=str(task_id), status='Success', recommendations=result)

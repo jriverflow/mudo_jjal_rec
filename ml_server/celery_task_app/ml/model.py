@@ -158,24 +158,23 @@ class RecModel:
         """
         Returns recommendations given a sentence
         """
-        sentence_modified =spell_checker.check(sentence) # 맞춤법 검사
+        sentence_modified = spell_checker.check(sentence) # 맞춤법 검사
         sentence_modified = sentence_modified.checked
 
-        user_emotion,  user_embedding = self.predict(sentence_modified)
+        user_emotion, user_embedding = self.predict(sentence_modified)
 
         candidate = []
         for key, values in self.classification_result.items():
-            if values[2] == user_emotion:
-                cosine_si = cosine_similarity(user_embedding[0], values[4][0])
-                candidate.append([key,cosine_si])
-            else:
-                continue    
+            meme_emotion = values[2]
+            emotion_concord = ( meme_emotion == user_emotion )
+            similarity = cosine_similarity(user_embedding[0], values[4][0])
+            candidate.append([similarity, key, emotion_concord])
 
-        candidate = sorted(candidate, key=lambda candidate: candidate[1], reverse=True)
+        candidate = sorted(candidate, key=lambda candidate: candidate[0], reverse=True)
         top_10 = candidate[:10]
         
         answer = []
         for i in top_10:
-            answer.append(i[0])
-            
+            answer.append({'file_name': i[1], 'emotion_concord': i[2]})
+
         return answer

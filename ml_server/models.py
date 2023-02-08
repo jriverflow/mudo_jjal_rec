@@ -13,9 +13,12 @@ class Task(BaseModel):
     task_id: str
     status: str
 
+class Recommendation(BaseModel):
+    file_name: str
+    emotion_concord: bool
 
 class Recommendations(BaseModel):
     """ Meme recommendation result """
     task_id: str
     status: str
-    recommendations: List[str]
+    recommendations: List[Recommendation]
