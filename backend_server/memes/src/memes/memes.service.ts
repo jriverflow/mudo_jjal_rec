@@ -9,6 +9,7 @@ import { Meme } from './entities/Meme.entity';
 import { catchError, firstValueFrom, lastValueFrom } from 'rxjs';
 import { AxiosError } from 'axios';
 
+
 @Injectable()
 export class MemesService {
   constructor(
@@ -65,6 +66,9 @@ export class MemesService {
       );
     const header = await firstValueFrom(res);
     const { data } = await lastValueFrom(res);
+
+    console.log(JSON.stringify(data.recommendations));
+    
 
     return Object.assign({ status_code: header.status }, data);
   }
