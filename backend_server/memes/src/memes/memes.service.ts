@@ -40,29 +40,32 @@ export class MemesService {
   }
 
   async recommendMeme(sentence: RecommendMemeDto) {
-    const res = this.httpService.post('http://localhost:8000/recommend', sentence).pipe(
-      catchError((err: AxiosError) => {
-        console.log(err.response.data);
-        throw 'An error accurred';
-      })
-    )
-    const header = await firstValueFrom(res)
+    const res = this.httpService
+      .post('http://localhost:8000/recommend', sentence)
+      .pipe(
+        catchError((err: AxiosError) => {
+          console.log(err.response.data);
+          throw 'An error accurred';
+        }),
+      );
+    const header = await firstValueFrom(res);
     const { data } = await lastValueFrom(res);
-    
-    return Object.assign({"status_code": header.status}, data);
+
+    return Object.assign({ status_code: header.status }, data);
   }
 
   async getRecMeme(taskId: string) {
-    const res = this.httpService.get(`http://localhost:8000/recommend/result/${taskId}`)
+    const res = this.httpService
+      .get(`http://localhost:8000/recommend/result/${taskId}`)
       .pipe(
-      catchError((err: AxiosError) => {
-        console.log(err.response.data);
-        throw 'An error accurred'
-      })
-    );
+        catchError((err: AxiosError) => {
+          console.log(err.response.data);
+          throw 'An error accurred';
+        }),
+      );
     const header = await firstValueFrom(res);
     const { data } = await lastValueFrom(res);
-    
-    return Object.assign({"status_code": header.status}, data);
+
+    return Object.assign({ status_code: header.status }, data);
   }
 }
