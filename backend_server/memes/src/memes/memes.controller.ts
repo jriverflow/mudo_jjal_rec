@@ -23,10 +23,9 @@ export class MemesController {
   }
 
   @Get('/search')
-  async filterMeme(@Query() query: FilterMemeDto) {
-    console.log(query);
+  filterMeme(@Query() query: FilterMemeDto) {
 
-    return await this.memesService.filterMeme(query);
+    return this.memesService.filterMeme(query);
   }
 
   @Get('/:id')

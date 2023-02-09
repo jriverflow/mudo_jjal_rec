@@ -37,9 +37,10 @@ export class MemesService {
     await this.repo.save(meme);
   }
 
-  async filterMeme({ keyword }: FilterMemeDto) {
+  async filterMeme({keyword}: FilterMemeDto) {  
+    const sentence = {"sentence" : keyword};
     const res = this.httpService
-      .post('http://localhost:8000/recommend', keyword)
+      .post('http://localhost:8000/recommend', sentence)
       .pipe(
         catchError((err: AxiosError) => {
           console.log(err.response.data);
@@ -50,6 +51,7 @@ export class MemesService {
     const taskId = data.task_id;
 
     let recommendations = [];
+    let results = [];
 
     while (true) {
       const current = this.httpService
@@ -62,6 +64,8 @@ export class MemesService {
         );
 
       const { data } = await lastValueFrom(current);
+      console.log('i am in while');
+      
 
       if (data.status == 'Success') {
         recommendations = data.recommendations;
@@ -71,14 +75,31 @@ export class MemesService {
       await sleep(5000);
     }
 
-    recommendations.forEach((element) => {
+
+    recommendations.forEach(async (element) => {
       const path = element.file_name;
-      console.log(
-        this.repo.find({
+      const emo_concord = element.emotion_concord;
+
+      const found = await this.repo.find({
           where: { path },
-        }),
-      );
-    });
+      });
+      
+      const result = {};
+      found.forEach(data => {
+        result["id"] = data.id;
+        result["path"] = data.path;
+        result["subtitle"] = data.subtitle;
+        result["personName"] = data.personName;
+      })
+      result["emotion_concord"] = emo_concord;
+      // console.log(result);
+      results.push(result);
+      console.log(results);
+      
+      });
+      console.log(results, "2번째");
+      
+      return results;
   }
 
   async recommendMeme(sentence: RecommendMemeDto) {
