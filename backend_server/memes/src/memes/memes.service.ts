@@ -9,6 +9,9 @@ import { Meme } from './entities/Meme.entity';
 import { catchError, firstValueFrom, lastValueFrom } from 'rxjs';
 import { AxiosError } from 'axios';
 
+function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
 
 @Injectable()
 export class MemesService {
@@ -34,9 +37,47 @@ export class MemesService {
     await this.repo.save(meme);
   }
 
-  async filterMeme({ keyword, personName }: FilterMemeDto) {
-    return await this.repo.find({
-      where: { keyword, personName },
+  async filterMeme({ keyword }: FilterMemeDto) {
+    const res = this.httpService
+      .post('http://localhost:8000/recommend', keyword)
+      .pipe(
+        catchError((err: AxiosError) => {
+          console.log(err.response.data);
+          throw 'An error accurred';
+        }),
+      );
+    const { data } = await lastValueFrom(res);
+    const taskId = data.task_id;
+
+    let recommendations = [];
+
+    while (true) {
+      const current = this.httpService
+        .get(`http://localhost:8000/recommend/result/${taskId}`)
+        .pipe(
+          catchError((err: AxiosError) => {
+            console.log(err.response.data);
+            throw 'An error accurred';
+          }),
+        );
+
+      const { data } = await lastValueFrom(current);
+
+      if (data.status == 'Success') {
+        recommendations = data.recommendations;
+        break;
+      }
+
+      await sleep(5000);
+    }
+
+    recommendations.forEach((element) => {
+      const path = element.file_name;
+      console.log(
+        this.repo.find({
+          where: { path },
+        }),
+      );
     });
   }
 
@@ -66,9 +107,6 @@ export class MemesService {
       );
     const header = await firstValueFrom(res);
     const { data } = await lastValueFrom(res);
-
-    console.log(JSON.stringify(data.recommendations));
-    
 
     return Object.assign({ status_code: header.status }, data);
   }
