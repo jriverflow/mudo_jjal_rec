@@ -51,7 +51,7 @@ export class MemesService {
     const taskId = data.task_id;
 
     let recommendations = [];
-    let results = [];
+    let results: string[] = [];
 
     while (true) {
       const current = this.httpService
@@ -81,22 +81,25 @@ export class MemesService {
       const found = await this.repo.find({
         where: { path },
       });
+      console.log(found);
+      
 
       const result = {};
       found.forEach((data) => {
         result['id'] = data.id;
         result['path'] = data.path;
         result['subtitle'] = data.subtitle;
-        result['personName'] = data.personName;
+        result['personName'] = String(data.personName).split('/');
       });
       result['emotion_concord'] = emo_concord;
       // console.log(result);
-      results.push(result);
-      console.log(results);
+      results.push(JSON.stringify(result));
+      console.log(results, "foreach 내부");
+      
     });
-    console.log(results, '2번째');
-
-    return results;
+    console.log(results);
+    
+    return Object.assign({"memes": JSON.stringify(results)});
   }
 
   async recommendMeme(sentence: RecommendMemeDto) {
