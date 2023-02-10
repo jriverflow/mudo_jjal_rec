@@ -71,7 +71,7 @@ export class MemesService {
         break;
       }
 
-      await sleep(5000);
+      await sleep(2000);
     }
 
     const promises = recommendations.map(async (element) => {
