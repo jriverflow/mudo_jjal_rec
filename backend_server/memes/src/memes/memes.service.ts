@@ -74,7 +74,7 @@ export class MemesService {
       await sleep(5000);
     }
 
-    const promises = recommendations.map(async (element) =>{
+    const promises = recommendations.map(async (element) => {
       const path = element.file_name;
       const emo_concord = element.emotion_concord;
 
@@ -92,10 +92,10 @@ export class MemesService {
       result['emotion_concord'] = emo_concord;
 
       results.push(result);
-    })
+    });
     await Promise.all(promises);
-    
-    return Object.assign({"memes": results});
+
+    return Object.assign({ memes: results });
   }
 
   async recommendMeme(sentence: RecommendMemeDto) {
