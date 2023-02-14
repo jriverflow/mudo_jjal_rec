@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { CreateMemeDto } from './dtos/create-meme.dto';
 import { FilterMemeDto } from './dtos/filter-meme.dto';
+import { RecommendMemeDto } from './dtos/recommend-meme.dto';
 import { Meme } from './entities/Meme.entity';
 import { MemesService } from './memes.service';
 
@@ -22,10 +23,9 @@ export class MemesController {
   }
 
   @Get('/search')
-  async filterMeme(@Query() query: FilterMemeDto) {
-    console.log(query);
+  filterMeme(@Query() query: FilterMemeDto) {
 
-    return await this.memesService.filterMeme(query);
+    return this.memesService.filterMeme(query);
   }
 
   @Get('/:id')
@@ -44,5 +44,19 @@ export class MemesController {
     const meme = await this.memesService.createMeme(body);
 
     return meme;
+  }
+
+  @Post('/recommend')
+  async recommendMeme(@Body() body: RecommendMemeDto) {
+    const res = await this.memesService.recommendMeme(body);
+
+    return res;
+  }
+
+  @Get('/recommend/result/:taskId')
+  async getResult(@Param('taskId') taskId: string) {
+    const res = await this.memesService.getRecMeme(taskId);
+
+    return res;
   }
 }
