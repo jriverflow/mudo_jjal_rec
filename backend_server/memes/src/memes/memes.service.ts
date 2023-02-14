@@ -52,6 +52,7 @@ export class MemesService {
 
     let recommendations = [];
     let results = [];
+    let user_emotion = "";
 
     while (true) {
       const current = this.httpService
@@ -68,6 +69,7 @@ export class MemesService {
 
       if (data.status == 'Success') {
         recommendations = data.recommendations;
+        user_emotion = data.emotion;
         break;
       }
 
@@ -77,6 +79,7 @@ export class MemesService {
     const promises = recommendations.map(async (element) => {
       const path = element.file_name;
       const emo_concord = element.emotion_concord;
+      const emotion = element.emotion;
 
       const found = await this.repo.find({
         where: { path },
@@ -90,12 +93,13 @@ export class MemesService {
         result['personName'] = String(data.personName).split('/');
       });
       result['emotion_concord'] = emo_concord;
+      result['emotion'] = emotion;
 
       results.push(result);
     });
     await Promise.all(promises);
 
-    return Object.assign({ memes: results });
+    return Object.assign({ emotion: user_emotion, memes: results });
   }
 
   async recommendMeme(sentence: RecommendMemeDto) {
