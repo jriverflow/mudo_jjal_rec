@@ -1,6 +1,6 @@
 import { IsString } from 'class-validator';
 
-export class FilterMemeDto {
+export class RecommendMemeDto {
   @IsString()
-  keyword: string;
+  sentence: string;
 }
