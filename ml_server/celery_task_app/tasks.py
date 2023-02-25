@@ -40,5 +40,5 @@ def recommend_mems(self, data):
     """
     Essentially the run method of RecommendTask
     """
-    recommendations = self.model.recommend(data['sentence'])
-    return recommendations
+    emotion, recommendations = self.model.recommend(data['sentence'])
+    return emotion, recommendations

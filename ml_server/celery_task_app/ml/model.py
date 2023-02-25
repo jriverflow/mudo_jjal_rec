@@ -1,85 +1,74 @@
 # ML model wrapper class used to load pretrained model and serve recommendations
 
-import json
-import os
-import pandas as pd
 import torch
 from torch import nn
-import torch.nn.functional as F
-import torch.optim as optim
-from torch.utils.data import Dataset, DataLoader
-import gluonnlp as nlp
+from transformers import AutoTokenizer, AutoModel, AdamW
+from sentence_transformers import SentenceTransformer, util
+from hanspell import spell_checker 
+import json
+import os
 import numpy as np
 
-from kobert.utils import get_tokenizer 
-from kobert.pytorch_kobert import get_pytorch_kobert_model
+device = torch.device('cpu')
 
-from hanspell import spell_checker
+# Roberta large 모델
 
-device = torch.device("cuda:0")
-
-bertmodel, vocab = get_pytorch_kobert_model() 
-
-class BERTClassifier(nn.Module):
-    def __init__(self,
-                 bert,
-                 hidden_size = 768,
-                 num_classes=5,
-                 dr_rate=None,
-                 params=None):
-        super(BERTClassifier, self).__init__()
-        self.bert = bert
-        self.dr_rate = dr_rate
-                 
-        self.classifier = nn.Linear(hidden_size , num_classes)
-        if dr_rate:
-            self.dropout = nn.Dropout(p=dr_rate)
-    
-    def gen_attention_mask(self, token_ids, valid_length):
-        attention_mask = torch.zeros_like(token_ids)
-        for i, v in enumerate(valid_length):
-            attention_mask[i][:v] = 1
-        return attention_mask.float()
-    
-
-    def embeddings(self, token_ids, valid_length, segment_ids, extract = True):
-        attention_mask = self.gen_attention_mask(token_ids, valid_length)
+class Roberta_largeForClassification(nn.Module):
+    def __init__(self, model_name, class_num):
+        super(Roberta_largeForClassification, self).__init__()
+        self.class_num = class_num
         
-        _, pooler = self.bert(input_ids = token_ids, token_type_ids = segment_ids.long(), attention_mask = attention_mask.float().to(token_ids.device))
+        self.roberta = AutoModel.from_pretrained(model_name)
+        emb_size = self.roberta.config.hidden_size
 
-        if extract:
-            return pooler
-        else:
-            if self.dr_rate:
-                out = self.dropout(pooler)
-            else:
-                out = pooler 
+        self.dropout = nn.Dropout(p= self.roberta.config.hidden_dropout_prob, inplace=False)
+        self.fn = nn.Linear(emb_size, class_num, bias = True)
+        
+    # outputs value : sequence_output, pooled_output, (hidden_states), (attentions)
+    def output(self,input_ids, attention_mask, token_type_ids =None):
+        sequence_output, pooler = self.roberta(input_ids= input_ids,attention_mask= attention_mask).values()
+        return sequence_output, pooler
+        
+    def mean_pooling(self, input_ids, attention_mask, token_type_ids =None):
+        token_embeddings = self.output(input_ids,attention_mask)[0]
+        input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
+        return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)  
+        
+    def forward(self, input_ids, attention_mask, token_type_ids =None):    
+        pooler = self.output(input_ids, attention_mask)[1]
+        dropout_result = self.dropout(pooler)
+        logit = self.fn(dropout_result)
+        return logit
 
-            return out      
+# input dataset 만들어주는 클래스
 
+class Roberta_large_Dataset():  
+  
+  def __init__(self, dataset,  tokenizer):
+    self.tokenizer = tokenizer
+    self.sentences = [str([i[0]]) for i in dataset]
+    self.labels = [np.int32(i[1]) for i in dataset]
 
-    def forward(self, token_ids, valid_length, segment_ids):
-        emb = self.embeddings(token_ids, valid_length, segment_ids, False)
-        return self.classifier(emb)
+  def __len__(self):
+    return (len(self.labels))
+  
+  def __getitem__(self, i):
+    text = self.sentences[i]
+    y = self.labels[i]
 
-class BERTDataset(Dataset):
-    """
-    # 모델에 input 될수 있도록 하는 데이터 변환 과정 
-    #  KoBERT 모델의 입력으로 들어갈 수 있는 형태가 되도록 토큰화, 정수 인코딩, 패딩 등을 해야함. 
-    """
-    def __init__(self, dataset, sent_idx, label_idx, bert_tokenizer, max_len,
-                 pad, pair):
-        transform = nlp.data.BERTSentenceTransform(
-            bert_tokenizer, max_seq_length=max_len, pad=pad, pair=pair)
+    inputs = self.tokenizer(
+        text, 
+        return_tensors='pt',
+        truncation=True,
+        max_length=64,
+        padding='max_length',
+        add_special_tokens=True
+        )
+    
+    input_ids = inputs['input_ids'][0]
+    attention_mask = inputs['attention_mask'][0]
 
-        self.sentences = [transform([i[sent_idx]]) for i in dataset]
-        self.labels = [np.int32(i[label_idx]) for i in dataset]
-
-    def __getitem__(self, i):
-        return (self.sentences[i] + (self.labels[i], ))
-
-    def __len__(self):
-        return (len(self.labels))
+    return input_ids, attention_mask, y
 
 
 # Cosine similarity
@@ -93,16 +82,15 @@ class RecModel:
     """ Wrapper for loading and serving pre-trained model"""
     def __init__(self):
         pass
-        self.model = self._load_model_from_path(MODEL_DICT_PATH)
-        self.classification_result = self._load_classification_result_from_path(CLASSIFICATION_RESULT_PATH)
 
     @staticmethod
     def _load_model_from_path(model_dict_path):
         os.chdir(os.path.dirname(model_dict_path))
-        bertmodel, _ = get_pytorch_kobert_model()
-        device = torch.device("cuda:0")
-        model = BERTClassifier(bertmodel, dr_rate=0.5).to(device)
-        model.load_state_dict(torch.load(model_dict_path))
+        # Model load
+        model_name = "klue/roberta-large"
+        class_num = 5
+        model = Roberta_largeForClassification(model_name, class_num).to(device)
+        model.load_state_dict(torch.load(model_dict_path, map_location=torch.device('cpu')))
         return model
 
     @staticmethod
@@ -112,33 +100,18 @@ class RecModel:
             result = json.load(f)
         return result
 
-    def predict(self, predict_sentence):
-
-        data = [predict_sentence, '0']
+    def predict(self, sentence):
+        data = [sentence, '0']
         dataset_another = [data]
+        tokenizer = AutoTokenizer.from_pretrained("klue/roberta-large")
+        another_test = Roberta_large_Dataset(dataset_another, tokenizer)
+        test_dataloader = torch.utils.data.DataLoader(another_test)
+        model = self._load_model_from_path(MODEL_DICT_PATH)
+        model.eval()
 
-        #토큰화
-        tokenizer = get_tokenizer()
-        tok = nlp.data.BERTSPTokenizer(tokenizer, vocab, lower=False)
-
-        max_len = 64
-        batch_size = 64
-
-        another_test = BERTDataset(dataset_another, 0, 1, tok, max_len, True, False)
-        test_dataloader = torch.utils.data.DataLoader(another_test, batch_size=batch_size, num_workers=4)
-        
-        self.model.eval()
-
-        for batch_id, (token_ids, valid_length, segment_ids, label) in enumerate(test_dataloader):
-            token_ids = token_ids.long().to(device)
-            segment_ids = segment_ids.long().to(device)
-
-            valid_length= valid_length
-            label = label.long().to(device)
-
-            logits = self.model(token_ids, valid_length, segment_ids).cpu().detach().numpy()  # 범주 5개로 된 출력값
-        
-            embed = self.model.embeddings(token_ids, valid_length, segment_ids).cpu().detach().numpy().tolist()  # 임베딩값
+        for input_ids_batch, attention_masks_batch, y_batch in test_dataloader:
+            y_batch = y_batch.long().to(device)
+            logits = model(input_ids_batch.to(device), attention_mask=attention_masks_batch.to(device)).cpu().detach().numpy()
 
             s = ''
             if np.argmax(logits) == 0:
@@ -152,30 +125,40 @@ class RecModel:
             elif np.argmax(logits) == 4:
                 s = "행복"
 
-            return s,  embed
+        del model
+        del tokenizer
+            
+        return s
 
     def recommend(self, sentence):
         """
         Returns recommendations given a sentence
         """
         sentence_modified =spell_checker.check(sentence) # 맞춤법 검사
-        sentence_modified = sentence_modified.checked
+        sentence_modified = sentence_modified.checked # 맞춤법이 고쳐진 문장
+        user_emotion = self.predict(sentence_modified)  # RoBERTa모델을 이용하여 예측된 user의 감정
 
-        user_emotion,  user_embedding = self.predict(sentence_modified)
+        embedder = SentenceTransformer("sentence-transformers/xlm-r-100langs-bert-base-nli-stsb-mean-tokens")
+        bert_100langs_user_embeddings = embedder.encode(sentence_modified, convert_to_tensor=False).tolist() # bert_100langs를 사용한 user의 문장 임베딩
+        del embedder
 
         candidate = []
-        for key, values in self.classification_result.items():
-            if values[2] == user_emotion:
-                cosine_si = cosine_similarity(user_embedding[0], values[4][0])
-                candidate.append([key,cosine_si])
-            else:
-                continue    
 
-        candidate = sorted(candidate, key=lambda candidate: candidate[1], reverse=True)
-        top_10 = candidate[:10]
+        classification_result = self._load_classification_result_from_path(CLASSIFICATION_RESULT_PATH)
+        for key, values in classification_result.items():
+            consine_si = cosine_similarity(values[4]['bert_100langs'], bert_100langs_user_embeddings) # bert_100langs 모델을 사용했을 때 무한도전 자막에 대한 임베딩값과 user문장의 임베딩 값의 코사인 유사도
+
+            meme_emotion = values[2]
+            emotion_concord = ( meme_emotion == user_emotion )
+
+            candidate.append([consine_si, key, meme_emotion, emotion_concord])
+        del classification_result
+
+        candidate = sorted(candidate, key=lambda candidate: candidate[0], reverse=True)
+        top_20 = candidate[:20]
         
         answer = []
-        for i in top_10:
-            answer.append(i[0])
-            
-        return answer
+        for i in top_20:
+            answer.append({'file_name': i[1], 'emotion': i[2], 'emotion_concord': i[3]})
+
+        return user_emotion, answer

@@ -8,7 +8,7 @@ test_body = {
 }
 
 
-def dummy_task(data, poll_interval=5, max_attempts=10):
+def dummy_task(data, poll_interval=5, max_attempts=20):
     base_uri = r'http://127.0.0.1:8000'
     recommend_task_uri = base_uri + '/recommend'
     task = requests.post(recommend_task_uri, json=data)
@@ -20,7 +20,7 @@ def dummy_task(data, poll_interval=5, max_attempts=10):
         attempts += 1
         result_response = requests.get(recommend_result_uri)
         if result_response.status_code == 200:
-            result = result_response.json()['recommendations']
+            result = result_response.json()
             break
         sleep(poll_interval)
     return result
