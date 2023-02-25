@@ -81,7 +81,10 @@ CLASSIFICATION_RESULT_PATH = os.environ['CLASSIFICATION_RESULT_PATH']
 class RecModel:
     """ Wrapper for loading and serving pre-trained model"""
     def __init__(self):
-        pass
+        self.tokenizer = AutoTokenizer.from_pretrained("klue/roberta-large")
+        self.model = self._load_model_from_path(MODEL_DICT_PATH)
+        self.classification_result = self._load_classification_result_from_path(CLASSIFICATION_RESULT_PATH)
+        self.embedder = SentenceTransformer("sentence-transformers/xlm-r-100langs-bert-base-nli-stsb-mean-tokens")
 
     @staticmethod
     def _load_model_from_path(model_dict_path):
@@ -103,15 +106,13 @@ class RecModel:
     def predict(self, sentence):
         data = [sentence, '0']
         dataset_another = [data]
-        tokenizer = AutoTokenizer.from_pretrained("klue/roberta-large")
-        another_test = Roberta_large_Dataset(dataset_another, tokenizer)
+        another_test = Roberta_large_Dataset(dataset_another, self.tokenizer)
         test_dataloader = torch.utils.data.DataLoader(another_test)
-        model = self._load_model_from_path(MODEL_DICT_PATH)
-        model.eval()
+        self.model.eval()
 
         for input_ids_batch, attention_masks_batch, y_batch in test_dataloader:
             y_batch = y_batch.long().to(device)
-            logits = model(input_ids_batch.to(device), attention_mask=attention_masks_batch.to(device)).cpu().detach().numpy()
+            logits = self.model(input_ids_batch.to(device), attention_mask=attention_masks_batch.to(device)).cpu().detach().numpy()
 
             s = ''
             if np.argmax(logits) == 0:
@@ -124,9 +125,6 @@ class RecModel:
                 s = "중립"
             elif np.argmax(logits) == 4:
                 s = "행복"
-
-        del model
-        del tokenizer
             
         return s
 
@@ -138,21 +136,17 @@ class RecModel:
         sentence_modified = sentence_modified.checked # 맞춤법이 고쳐진 문장
         user_emotion = self.predict(sentence_modified)  # RoBERTa모델을 이용하여 예측된 user의 감정
 
-        embedder = SentenceTransformer("sentence-transformers/xlm-r-100langs-bert-base-nli-stsb-mean-tokens")
-        bert_100langs_user_embeddings = embedder.encode(sentence_modified, convert_to_tensor=False).tolist() # bert_100langs를 사용한 user의 문장 임베딩
-        del embedder
+        bert_100langs_user_embeddings = self.embedder.encode(sentence_modified, convert_to_tensor=False).tolist() # bert_100langs를 사용한 user의 문장 임베딩
 
         candidate = []
 
-        classification_result = self._load_classification_result_from_path(CLASSIFICATION_RESULT_PATH)
-        for key, values in classification_result.items():
+        for key, values in self.classification_result.items():
             consine_si = cosine_similarity(values[4]['bert_100langs'], bert_100langs_user_embeddings) # bert_100langs 모델을 사용했을 때 무한도전 자막에 대한 임베딩값과 user문장의 임베딩 값의 코사인 유사도
 
             meme_emotion = values[2]
             emotion_concord = ( meme_emotion == user_emotion )
 
             candidate.append([consine_si, key, meme_emotion, emotion_concord])
-        del classification_result
 
         candidate = sorted(candidate, key=lambda candidate: candidate[0], reverse=True)
         top_20 = candidate[:20]
