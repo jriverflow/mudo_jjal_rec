@@ -139,7 +139,7 @@ class RecModel:
         user_emotion = self.predict(sentence_modified)  # RoBERTa모델을 이용하여 예측된 user의 감정
 
         embedder = SentenceTransformer("sentence-transformers/xlm-r-100langs-bert-base-nli-stsb-mean-tokens")
-        bert_100langs_user_embeddings = self.embedder.encode(sentence_modified, convert_to_tensor=False).tolist() # bert_100langs를 사용한 user의 문장 임베딩
+        bert_100langs_user_embeddings = embedder.encode(sentence_modified, convert_to_tensor=False).tolist() # bert_100langs를 사용한 user의 문장 임베딩
         del embedder
 
         candidate = []
