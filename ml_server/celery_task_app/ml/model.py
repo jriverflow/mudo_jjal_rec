@@ -81,6 +81,7 @@ CLASSIFICATION_RESULT_PATH = os.environ['CLASSIFICATION_RESULT_PATH']
 class RecModel:
     """ Wrapper for loading and serving pre-trained model"""
     def __init__(self):
+        pass
 
     @staticmethod
     def _load_model_from_path(model_dict_path):
