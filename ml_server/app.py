@@ -10,7 +10,6 @@ import json
 
 app = FastAPI()
 
-
 @app.post('/recommend', response_model=Task, status_code=202)
 async def session(client: Client):
     """Create celery recommendation task. Return task_id to client in order to retrieve result"""
@@ -24,7 +23,6 @@ async def task_result(task_id):
     """Fetch result for given task_id"""
     task = AsyncResult(task_id)
     if not task.ready():
-        print(app.url_path_for('session'))
         return JSONResponse(status_code=202, content={'task_id': str(task_id), 'status': 'Processing'})
-    result = task.get()
-    return Recommendations(task_id=str(task_id), status='Success', recommendations=result)
+    emotion, result = task.get()
+    return Recommendations(task_id=str(task_id), status='Success', emotion=emotion, recommendations=result)

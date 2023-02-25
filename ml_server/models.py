@@ -15,10 +15,12 @@ class Task(BaseModel):
 
 class Recommendation(BaseModel):
     file_name: str
+    emotion: str
     emotion_concord: bool
 
 class Recommendations(BaseModel):
     """ Meme recommendation result """
     task_id: str
     status: str
+    emotion: str
     recommendations: List[Recommendation]
